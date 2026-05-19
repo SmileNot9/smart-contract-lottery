@@ -84,7 +84,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
             keyHash: i_keyHash,
             subId: i_subscriptionId,
-            requestConfirmations: REQUEST_CONFIRMATINOS,
+            requestConfirmations: REQUEST_CONFIRMATIONS,
             callbackGasLimit: i_callbackGasLimit,
             numWords: NUM_WORDS,
             // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
