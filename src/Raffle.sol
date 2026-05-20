@@ -60,6 +60,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     /* Events */
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     constructor(
         uint256 _entraceFee,
@@ -94,10 +95,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function pickWinner() external {
+        // Checks (require, condicionals, etc)
         if (block.timestamp - s_lastTimeStamp > I_INTERVAL) {
             revert();
         }
 
+        // Effects (Internal Contract State changes)
         s_raffleState = RaffleState.CALCULATING;
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
@@ -112,13 +115,21 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
+    // CEI: Checks-Effects-Interactions pattern
     function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+        // Checks (require, condicionals, etc)
+
+        // Effects (Internal Contract State changes)
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
 
         s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+        s_lastTimeStamp = block.timestamp;
+        emit WinnerPicked(s_recentWinner);
 
+        // Interactions (External Contract Interactions)
         (bool success,) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
             revert Raffle__TransferFailed();
