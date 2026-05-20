@@ -36,17 +36,27 @@ import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2
 contract Raffle is VRFConsumerBaseV2Plus {
     /* Errors */
     error Raffle__NotEnoughETHEntered();
+    error Raffle__TransferFailed();
+    error Raffle__RaffleNotOpen();
+
+    /* Type declarations */
+    enum RaffleState {
+        OPEN, // 0
+        CALCULATING // 1
+    }
 
     /* State variables */
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
-    uint256 private immutable i_entraceFee;
-    uint256 private immutable i_interval;
-    bytes32 private immutable i_keyHash;
-    uint256 private immutable i_subscriptionId;
-    uint32 private immutable i_callbackGasLimit;
+    uint256 private immutable I_ENTRANCE_FEE;
+    uint256 private immutable I_INTERVAL;
+    bytes32 private immutable I_KEY_HASH;
+    uint256 private immutable I_SUBSCRIPTION_ID;
+    uint32 private immutable I_CALLBACK_GAS_LIMIT;
     uint256 private s_lastTimeStamp;
     address payable[] private s_players;
+    address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     /* Events */
     event RaffleEntered(address indexed player);
@@ -59,33 +69,42 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 _subscriptionId,
         uint32 _callbackGasLimit
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
-        i_entraceFee = _entraceFee;
-        i_interval = _interval;
+        I_ENTRANCE_FEE = _entraceFee;
+        I_INTERVAL = _interval;
+        I_KEY_HASH = _gasLane;
+        I_SUBSCRIPTION_ID = _subscriptionId;
+        I_CALLBACK_GAS_LIMIT = _callbackGasLimit;
+
         s_lastTimeStamp = block.timestamp;
-        i_keyHash = _gasLane;
-        i_subscriptionId = _subscriptionId;
-        i_callbackGasLimit = _callbackGasLimit;
+        s_raffleState = RaffleState.OPEN; // or: s_raffleState = RaffleState(0);
     }
 
     function enterRaffle() external payable {
         // require(msg.value >= entraceFee, "Not enough ETH");
         // This version ⭣⭣⭣ more gas efficient than ⭡⭡⭡
-        if (msg.value < i_entraceFee) {
+        if (msg.value < I_ENTRANCE_FEE) {
             revert Raffle__NotEnoughETHEntered();
         }
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__RaffleNotOpen();
+        }
+
         s_players.push(payable(msg.sender));
         emit RaffleEntered(msg.sender);
     }
 
     function pickWinner() external {
-        if (block.timestamp - s_lastTimeStamp > i_interval) {
+        if (block.timestamp - s_lastTimeStamp > I_INTERVAL) {
             revert();
         }
+
+        s_raffleState = RaffleState.CALCULATING;
+
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
-            keyHash: i_keyHash,
-            subId: i_subscriptionId,
+            keyHash: I_KEY_HASH,
+            subId: I_SUBSCRIPTION_ID,
             requestConfirmations: REQUEST_CONFIRMATIONS,
-            callbackGasLimit: i_callbackGasLimit,
+            callbackGasLimit: I_CALLBACK_GAS_LIMIT,
             numWords: NUM_WORDS,
             // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
             extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}))
@@ -93,10 +112,25 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {}
+    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable recentWinner = s_players[indexOfWinner];
+        s_recentWinner = recentWinner;
+
+        s_raffleState = RaffleState.OPEN;
+
+        (bool success,) = recentWinner.call{value: address(this).balance}("");
+        if (!success) {
+            revert Raffle__TransferFailed();
+        }
+    }
 
     /* Getter functions */
     function getEntranceFee() external view returns (uint256) {
-        return i_entraceFee;
+        return I_ENTRANCE_FEE;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
     }
 }
