@@ -38,6 +38,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__NotEnoughETHEntered();
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
+    error Raffle__UpkeepNotNeeded(RaffleState currentState, uint256 balance, uint256 numPlayers);
 
     /* Type declarations */
     enum RaffleState {
@@ -121,9 +122,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
     {
         bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= I_INTERVAL);
         bool lotteryIsOpen = s_raffleState == RaffleState.OPEN;
-        bool hasETH = address(this).balance > 0;
+        bool hasEth = address(this).balance > 0;
         bool hasPlayers = s_players.length > 0;
-        unkeepNeeded = timeHasPassed && lotteryIsOpen && hasETH && hasPlayers;
+        unkeepNeeded = timeHasPassed && lotteryIsOpen && hasEth && hasPlayers;
         return (unkeepNeeded, bytes(""));
     }
 
@@ -135,7 +136,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // Checks (require, condicionals, etc)
         (bool upkeepNeeded,) = checkUpkeep(bytes(""));
         if (!upkeepNeeded) {
-            revert();
+            revert Raffle__UpkeepNotNeeded(s_raffleState, address(this).balance, s_players.length);
         }
 
         // Effects (Internal Contract State changes)
@@ -152,11 +153,18 @@ contract Raffle is VRFConsumerBaseV2Plus {
         });
 
         // Interactions (External Contract Interactions)
-        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        s_vrfCoordinator.requestRandomWords(request);
     }
 
     // CEI: Checks-Effects-Interactions pattern
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+    function fulfillRandomWords(
+        uint256,
+        /* requestId */
+        uint256[] calldata randomWords
+    )
+        internal
+        override
+    {
         // Checks (require, condicionals, etc)
 
         // Effects (Internal Contract State changes)
