@@ -81,6 +81,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function enterRaffle() external payable {
+        //Checks (require, condicionals, etc)
         // require(msg.value >= entraceFee, "Not enough ETH");
         // This version ⭣⭣⭣ more gas efficient than ⭡⭡⭡
         if (msg.value < I_ENTRANCE_FEE) {
@@ -90,13 +91,50 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__RaffleNotOpen();
         }
 
+        // Effects (Internal Contract State changes)
         s_players.push(payable(msg.sender));
         emit RaffleEntered(msg.sender);
     }
 
-    function pickWinner() external {
+    // When should the winner be picked?
+    /**
+     * @dev This is the function that the Chainlink nodes will check
+     * to see if the lottery is ready to look for a winner.
+     * The following should be true for this to return true:
+     * 1. The time interval has passed between raffle runs.
+     * 2. The lottery is open.
+     * 3. The contract has ETH (= has players).
+     * 4. Implicity, your subscription is funded with LINK.
+     * @param - ignored (null)
+     * @return unkeepNeeded true if it's time to restart the lottery
+     * @return - ignored (null)
+     */
+    function checkUpkeep(
+        bytes memory /* checkData */
+    )
+        public
+        view
+        returns (
+            bool unkeepNeeded,
+            bytes memory /* performData */
+        )
+    {
+        bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= I_INTERVAL);
+        bool lotteryIsOpen = s_raffleState == RaffleState.OPEN;
+        bool hasETH = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+        unkeepNeeded = timeHasPassed && lotteryIsOpen && hasETH && hasPlayers;
+        return (unkeepNeeded, bytes(""));
+    }
+
+    function performUpkeep(
+        bytes calldata /* performData */
+    )
+        external
+    {
         // Checks (require, condicionals, etc)
-        if (block.timestamp - s_lastTimeStamp > I_INTERVAL) {
+        (bool upkeepNeeded,) = checkUpkeep(bytes(""));
+        if (!upkeepNeeded) {
             revert();
         }
 
@@ -112,6 +150,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
             // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
             extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}))
         });
+
+        // Interactions (External Contract Interactions)
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
@@ -123,11 +163,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
+        emit WinnerPicked(s_recentWinner);
 
         s_raffleState = RaffleState.OPEN;
         s_players = new address payable[](0);
         s_lastTimeStamp = block.timestamp;
-        emit WinnerPicked(s_recentWinner);
 
         // Interactions (External Contract Interactions)
         (bool success,) = recentWinner.call{value: address(this).balance}("");
