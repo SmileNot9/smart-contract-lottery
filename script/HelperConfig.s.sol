@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {VRFCoordinatorV2_5Mock} from "../lib/chainlink-evm/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {LinkToken} from "../test/Mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     /* VRF Mock values */
@@ -26,6 +27,7 @@ contract HelperConfig is CodeConstants, Script {
         bytes32 gasLane;
         uint256 subscriptionId;
         uint32 callbackGasLimit;
+        address link;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -52,6 +54,7 @@ contract HelperConfig is CodeConstants, Script {
             vm.startBroadcast();
             VRFCoordinatorV2_5Mock vrfCoordinatorMock =
                 new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+            LinkToken linkToken = new LinkToken();
             vm.stopBroadcast();
             return localNetworkConfig = NetworkConfig({
                 entranceFee: 0.001 ether,
@@ -59,7 +62,8 @@ contract HelperConfig is CodeConstants, Script {
                 vrfCoordinator: address(vrfCoordinatorMock),
                 gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15, // dosen't matter for local testing
                 subscriptionId: vrfCoordinatorMock.createSubscription(),
-                callbackGasLimit: 500000 // dosen't matter for local testing
+                callbackGasLimit: 500000, // dosen't matter for local testing
+                link: address(linkToken)
             });
         }
     }
@@ -74,8 +78,9 @@ contract HelperConfig is CodeConstants, Script {
             interval: 30,
             vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
-            subscriptionId: 0,
-            callbackGasLimit: 500000
+            subscriptionId: 44475870725460226881155072642636617962632901917007953964331185161650737273551,
+            callbackGasLimit: 500000,
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
         });
     }
 }

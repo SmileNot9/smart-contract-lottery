@@ -38,7 +38,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__NotEnoughETHEntered();
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
-    error Raffle__UpkeepNotNeeded(RaffleState currentState, uint256 balance, uint256 numPlayers);
+    error Raffle__UpkeepNotNeeded(uint256 remainingTime, RaffleState currentState, uint256 balance, uint256 numPlayers);
 
     /* Type declarations */
     enum RaffleState {
@@ -136,7 +136,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // Checks (require, condicionals, etc)
         (bool upkeepNeeded,) = checkUpkeep(bytes(""));
         if (!upkeepNeeded) {
-            revert Raffle__UpkeepNotNeeded(s_raffleState, address(this).balance, s_players.length);
+            uint256 timeSinceLastRun = block.timestamp - s_lastTimeStamp;
+            revert Raffle__UpkeepNotNeeded(
+                (I_INTERVAL - timeSinceLastRun), s_raffleState, address(this).balance, s_players.length
+            );
         }
 
         // Effects (Internal Contract State changes)
@@ -191,5 +194,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getRecentWinner() external view returns (address) {
         return s_recentWinner;
+    }
+
+    function getRaffleState() public view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getPlayer(uint256 index) public view returns (address) {
+        return s_players[index];
     }
 }
