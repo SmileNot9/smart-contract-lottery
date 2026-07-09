@@ -55,13 +55,14 @@ contract HelperConfig is CodeConstants, Script {
             VRFCoordinatorV2_5Mock vrfCoordinatorMock =
                 new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
             LinkToken linkToken = new LinkToken();
+            uint256 subscriptionId = vrfCoordinatorMock.createSubscription();
             vm.stopBroadcast();
             return localNetworkConfig = NetworkConfig({
                 entranceFee: 0.001 ether,
                 interval: 30,
                 vrfCoordinator: address(vrfCoordinatorMock),
                 gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15, // dosen't matter for local testing
-                subscriptionId: vrfCoordinatorMock.createSubscription(),
+                subscriptionId: subscriptionId,
                 callbackGasLimit: 500000, // dosen't matter for local testing
                 link: address(linkToken)
             });
