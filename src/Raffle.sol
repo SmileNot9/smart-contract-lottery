@@ -38,6 +38,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__NotEnoughETHEntered();
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
+    error Raffle__NotCalculating();
     error Raffle__UpkeepNotNeeded(uint256 remainingTime, RaffleState currentState, uint256 balance, uint256 numPlayers);
 
     /* Type declarations */
@@ -169,6 +170,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
         override
     {
         // Checks (require, condicionals, etc)
+        if (s_raffleState != RaffleState.CALCULATING) {
+            revert Raffle__NotCalculating();
+        }
 
         // Effects (Internal Contract State changes)
         uint256 indexOfWinner = randomWords[0] % s_players.length;
