@@ -26,6 +26,9 @@ pragma solidity ^0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {
+    AutomationCompatibleInterface
+} from "@chainlink/contracts/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 
 /**
  * @title A sample Raffle Contract
@@ -33,7 +36,7 @@ import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2
  * @notice Contract that creates a sample raffle using ChainLink VRF
  * @dev It implements Chainlink VRFv2.5
  */
-contract Raffle is VRFConsumerBaseV2Plus {
+contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     /* Errors */
     error Raffle__NotEnoughETHEntered();
     error Raffle__TransferFailed();
@@ -134,7 +137,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         bytes calldata /* performData */
     )
         external
-        returns (uint256 requestId)
+        override
     {
         // Checks (require, condicionals, etc)
         (bool upkeepNeeded,) = checkUpkeep(bytes(""));
@@ -159,9 +162,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         });
 
         // Interactions (External Contract Interactions)
-        requestId = s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
         emit RequestedRaffleWinner(requestId);
-        return requestId;
     }
 
     // CEI: Checks-Effects-Interactions pattern
