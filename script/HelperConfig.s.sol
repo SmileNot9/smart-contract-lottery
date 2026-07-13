@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {VRFCoordinatorV2_5Mock} from "../lib/chainlink-evm/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {LinkToken} from "../test/Mocks/LinkToken.sol";
+import {CommonBase} from "../lib/forge-std/src/Base.sol";
 
 abstract contract CodeConstants {
     /* VRF Mock values */
@@ -28,6 +29,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link;
+        address account;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -64,7 +66,8 @@ contract HelperConfig is CodeConstants, Script {
                 gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15, // dosen't matter for local testing
                 subscriptionId: subscriptionId,
                 callbackGasLimit: 500000, // dosen't matter for local testing
-                link: address(linkToken)
+                link: address(linkToken),
+                account: DEFAULT_SENDER
             });
         }
     }
@@ -81,7 +84,8 @@ contract HelperConfig is CodeConstants, Script {
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
             subscriptionId: 44475870725460226881155072642636617962632901917007953964331185161650737273551,
             callbackGasLimit: 500000,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            account: 0xED29D17bC33EeE7ac6bE516022020046C0Ec3FFD
         });
     }
 }

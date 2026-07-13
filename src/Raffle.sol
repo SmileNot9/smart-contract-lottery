@@ -63,6 +63,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Events */
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(
         uint256 _entraceFee,
@@ -133,6 +134,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         bytes calldata /* performData */
     )
         external
+        returns (uint256 requestId)
     {
         // Checks (require, condicionals, etc)
         (bool upkeepNeeded,) = checkUpkeep(bytes(""));
@@ -157,7 +159,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
         });
 
         // Interactions (External Contract Interactions)
-        s_vrfCoordinator.requestRandomWords(request);
+        requestId = s_vrfCoordinator.requestRandomWords(request);
+        emit RequestedRaffleWinner(requestId);
+        return requestId;
     }
 
     // CEI: Checks-Effects-Interactions pattern
@@ -200,11 +204,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return s_recentWinner;
     }
 
-    function getRaffleState() public view returns (RaffleState) {
+    function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
     }
 
-    function getPlayer(uint256 index) public view returns (address) {
+    function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
+    }
+
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
     }
 }
