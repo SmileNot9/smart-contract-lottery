@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Raffle} from "src/Raffle.sol";
 import {CreateSubscription, FundSubscription, AddConsumer} from "script/Interactions.s.sol";
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
-import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {VRFCoordinatorV2_5Mock} from "lib/chainlink-evm/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract InteractionsTest is Test {
+contract InteractionsTest is Test, CodeConstants {
     HelperConfig public helperConfig;
-    Raffle public raffle;
     address vrfCoordinator;
     address account;
     address link;
@@ -25,20 +22,46 @@ contract InteractionsTest is Test {
         link = networkConfig.link;
     }
 
+    modifier skipFork() {
+        if (block.chainid != LOCAL_CHAIN_ID) {
+            return;
+        }
+        _;
+    }
+
     function testCreateSubscriptionReturnsValidSubId() public {
+        // Arrange
         CreateSubscription createSubscription = new CreateSubscription();
+
+        // Act
         (uint256 subId,) = createSubscription.createSubscription(vrfCoordinator, account);
+
+        // Assert
         assert(subId != 0);
     }
 
-    function testFundSubscriptionGetFunded() public {
-        CreateSubscription createSubscription = new CreateSubscription();
-        (uint256 subId,) = createSubscription.createSubscription(vrfCoordinator, account);
+    function testFundSubscriptionGetFunded() public skipFork {
+        //Arrange
         FundSubscription fundSubscription = new FundSubscription();
-        fundSubscription.fundSubscription(vrfCoordinator, subId, link, account);
-        (uint96 balance,,,,) = VRFCoordinatorV2_5Mock(vrfCoordinator).getSubscription(subId);
+
+        // Act
+        fundSubscription.fundSubscription(vrfCoordinator, subscriptionId, link, account);
+
+        // Assert
+        (uint96 balance,,,,) = VRFCoordinatorV2_5Mock(vrfCoordinator).getSubscription(subscriptionId);
         assert(balance > 0);
     }
 
-    function testAddConsumerWorks() public {}
+    function testAddConsumerWorks() public skipFork {
+        // Arrange
+        AddConsumer addConsumer = new AddConsumer();
+        address fakeConsumer = makeAddr("fakeConsumer");
+
+        // Act
+        addConsumer.addConsumer(fakeConsumer, subscriptionId, vrfCoordinator, account);
+
+        // Assert
+        (,,,, address[] memory consumers) = VRFCoordinatorV2_5Mock(vrfCoordinator).getSubscription(subscriptionId);
+        assert(consumers[0] == fakeConsumer);
+    }
 }
